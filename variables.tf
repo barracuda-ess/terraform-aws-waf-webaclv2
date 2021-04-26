@@ -15,178 +15,75 @@ variable "alb_arn" {
   default     = ""
 }
 
+variable "alb_arn_list" {
+  type        = list(string)
+  description = "Application Load Balancer ARN list"
+  default     = []
+}
+
 variable "tags" {
   description = "A map of tags (key-value pairs) passed to resources."
   type        = map(string)
   default     = {}
 }
 
-variable "enable_CommonRuleSet" {
-  type    = bool
-  default = false
+variable "rules" {
+  description = "List of WAF rules."
+  default     = []
 }
 
-variable "enable_AdminProtectionRuleSet" {
-  type    = bool
-  default = false
+variable "ip_set_rules" {
+  description = "List of WAF ip set rules to detect web requests coming from particular IP addresses or address ranges."
+  default     = []
 }
 
-variable "enable_KnownBadInputsRuleSet" {
-  type    = bool
-  default = false
+variable "ip_rate_based_rule" {
+  description = "A rate-based rule tracks the rate of requests for each originating IP address, and triggers the rule action when the rate exceeds a limit that you specify on the number of requests in any 5-minute time span"
+  default     = null
 }
 
-variable "enable_SQLiRuleSet" {
-  type    = bool
-  default = false
+variable "geo_match_rules" {
+  description = "List of WAF geo match rules to detect web requests coming from a particular set of contry codes."
+  default     = []
 }
 
-variable "enable_LinuxRuleSet" {
-  type    = bool
-  default = false
+variable "visibility_config" {
+  description = "Visibility config for WAFv2 web acl. https://www.terraform.io/docs/providers/aws/r/wafv2_web_acl.html#visibility-configuration"
+  type        = map(string)
+  default     = {}
 }
 
-variable "enable_UnixRuleSet" {
-  type    = bool
-  default = false
+variable "create_alb_association" {
+  type        = bool
+  description = "Whether to create alb association with WAF web acl"
+  default     = true
 }
 
-variable "enable_WindowsRuleSet" {
-  type    = bool
-  default = false
+variable "create_logging_configuration" {
+  type        = bool
+  description = "Whether to create logging configuration in order start logging from a WAFv2 Web ACL to Amazon Kinesis Data Firehose."
+  default     = false
 }
 
-variable "enable_PHPRuleSet" {
-  type    = bool
-  default = false
+variable "log_destination_configs" {
+  type        = list(string)
+  description = "The Amazon Kinesis Data Firehose Amazon Resource Name (ARNs) that you want to associate with the web ACL. Currently, only 1 ARN is supported."
+  default     = []
 }
 
-variable "enable_WordPressRuleSet" {
-  type    = bool
-  default = false
+variable "redacted_fields" {
+  description = "The parts of the request that you want to keep out of the logs. Up to 100 `redacted_fields` blocks are supported."
+  default     = []
 }
 
-variable "enable_AmazonIpReputationList" {
-  type    = bool
-  default = false
+variable "allow_default_action" {
+  type        = bool
+  description = "Set to `true` for WAF to allow requests by default. Set to `false` for WAF to block requests by default."
+  default     = true
 }
 
-variable "enable_AnonymousIpList" {
-  type    = bool
-  default = false
-}
-
-variable "enable_DefaultActionAllow" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountCommonRuleSet" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountAdminProtectionRuleSet" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountKnownBadInputsRuleSet" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountSQLiRuleSet" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountLinuxRuleSet" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountUnixRuleSet" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountWindowsRuleSet" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountPHPRuleSet" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountWordPressRuleSet" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountAmazonIpReputationList" {
-  type    = bool
-  default = true
-}
-
-variable "enable_OverrideActionCountAnonymousIpList" {
-  type    = bool
-  default = true
-}
-
-variable "CommonRuleSetExcludedRules" {
-  type    = string
-  default = ""
-}
-
-variable "AdminProtectionRuleSetExcludedRules" {
-  type    = string
-  default = ""
-}
-
-variable "KnownBadInputsRuleSetExcludedRules" {
-  type    = string
-  default = ""
-}
-
-variable "SQLiRuleSetExcludedRules" {
-  type    = string
-  default = ""
-}
-
-variable "LinuxRuleSetExcludedRules" {
-  type    = string
-  default = ""
-}
-
-variable "UnixRuleSetExcludedRules" {
-  type    = string
-  default = ""
-}
-
-variable "WindowsRuleSetExcludedRules" {
-  type    = string
-  default = ""
-}
-
-variable "PHPRuleSetExcludedRules" {
-  type    = string
-  default = ""
-}
-
-variable "WordPressRuleSetExcludedRules" {
-  type    = string
-  default = ""
-}
-
-variable "AmazonIpReputationListExcludedRules" {
-  type    = string
-  default = ""
-}
-
-variable "RulesAnonymousIpListExcludedRules" {
-  type    = string
-  default = ""
+variable "scope" {
+  type        = string
+  description = "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are CLOUDFRONT or REGIONAL. To work with CloudFront, you must also specify the region us-east-1 (N. Virginia) on the AWS provider."
+  default     = "REGIONAL"
 }

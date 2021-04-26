@@ -10,7 +10,7 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 2.44"
 
-  name = "simple-waf-test-vpc"
+  name = "simple-vpc"
 
   cidr = "10.0.0.0/16"
 
@@ -36,17 +36,97 @@ module "alb" {
 }
 
 #####
+# Firehose configuration
+#####
+
+resource "aws_s3_bucket" "bucket" {
+  bucket = "firehose-stream-test-bucket"
+  acl    = "private"
+}
+
+resource "aws_iam_role" "firehose" {
+  name = "firehose-stream-test-role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "firehose.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy" "custom-policy" {
+  name   = "firehose-role-custom-policy"
+  role   = aws_iam_role.firehose.id
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Action": [
+        "s3:AbortMultipartUpload",
+        "s3:GetBucketLocation",
+        "s3:GetObject",
+        "s3:ListBucket",
+        "s3:ListBucketMultipartUploads",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "${aws_s3_bucket.bucket.arn}",
+        "${aws_s3_bucket.bucket.arn}/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/wafv2.amazonaws.com/AWSServiceRoleForWAFV2Logging"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_kinesis_firehose_delivery_stream" "test_stream" {
+  name        = "aws-waf-logs-kinesis-firehose-test-stream"
+  destination = "s3"
+
+  s3_configuration {
+    role_arn   = aws_iam_role.firehose.arn
+    bucket_arn = aws_s3_bucket.bucket.arn
+  }
+}
+
+#####
 # Web Application Firewall configuration
 #####
-module "waf" {
+module "wafv2" {
   source = "../.."
 
   name_prefix = "test-waf-setup"
   alb_arn     = module.alb.arn
 
-  allow_default_action = true
-
   create_alb_association = true
+
+  create_logging_configuration = true
+  log_destination_configs      = [aws_kinesis_firehose_delivery_stream.test_stream.arn]
+  redacted_fields = [
+    {
+      single_header = {
+        name = "user-agent"
+      }
+    }
+  ]
 
   visibility_config = {
     cloudwatch_metrics_enabled = false
@@ -58,8 +138,6 @@ module "waf" {
     {
       name     = "AWSManagedRulesCommonRuleSet-rule-1"
       priority = "1"
-
-      override_action = "none"
 
       visibility_config = {
         cloudwatch_metrics_enabled = false
@@ -80,8 +158,6 @@ module "waf" {
     {
       name     = "AWSManagedRulesKnownBadInputsRuleSet-rule-2"
       priority = "2"
-
-      override_action = "count"
 
       visibility_config = {
         cloudwatch_metrics_enabled = false
@@ -107,25 +183,6 @@ module "waf" {
       managed_rule_group_statement = {
         name        = "AWSManagedRulesPHPRuleSet"
         vendor_name = "AWS"
-      }
-    }
-  ]
-
-  geo_match_rules = [
-    {
-      name     = "block_country_codes"
-      priority = "4"
-
-      action = "block"
-
-      geo_match_statement = {
-        country_codes = ["US", "NL"]
-      }
-
-      visibility_config = {
-        cloudwatch_metrics_enabled = false
-        metric_name                = "block_country_codes-metric"
-        sampled_requests_enabled   = false
       }
     }
   ]
